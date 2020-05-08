@@ -4,147 +4,103 @@ using UnityEngine;
 
 public class ConnectFourController : MonoBehaviour
 {
-	//opponent
-	[SerializeField] protected Opponent opponent;
+    //opponent
+    [SerializeField] protected Opponent opponent;
+    public bool IsHumanOpponent => opponent == null;
 
-	//game
-	protected Vector2Int boardSize = new Vector2Int(6, 7); //rows x cols
-    protected PieceType[,] board;
-	protected List<Vector2Int> possibleMovements;
+    //game
+    protected int turnCount;
+    protected Vector2Int boardSize = new Vector2Int(6, 7); //rows x cols
+    public int NumberOfRows => boardSize.x;
+    public int NumberOfColumns => boardSize.y;
+    public PieceType[,] board { get; private set; }
+    public List<Vector2Int> possibleMovements { get; private set; }
+    protected bool IsDraw => possibleMovements.Count == 0;
+    public PieceType CurrentType => _isPlayersTurn ? PieceType.Red : PieceType.Blue;
 
-	//flags
+    //flags
     private bool _isPlayersTurn = false;
+
     private bool _blockInput = false;
-	public bool CanPlay => _isPlayersTurn && !_blockInput;
+    public bool CanPlay => !_blockInput;
+    public bool IsFirstTurn => turnCount == 0;
+    
+    //const
+    public const int piecesToWin = 4;
+    
+    private void Awake()
+    {
+        //random player starts
+        _isPlayersTurn = (Random.Range(0,2) == 1);
 
-	//const
-	public const int piecesToWin = 4;
+        //start and draw board
+        board = new PieceType[boardSize.x, boardSize.y];
+        SetPossibleMovements();
+        
+        Utils.GetUIController().DrawBoard(boardSize.x, boardSize.y);
+        Invoke("UpdateState", 0.3f); //wait a bit for the UI
+    }
 
-	private void Awake()
-	{
-		//start and draw board
-		board = new PieceType[boardSize.x, boardSize.y];
-		Utils.GetUIController().DrawBoard(boardSize.x, boardSize.y);
-		UpdateState();
-	}
+    public void AddPiece(Vector2Int indexes)
+    {
+        turnCount++;
+        board[indexes.x, indexes.y] = CurrentType;
+        Utils.GetUIController().AddPiece(indexes, CurrentType);
+    }
 
-	public void AddPiece(Vector2Int indexes)
-	{
-		board[indexes.x, indexes.y] = _isPlayersTurn ? PieceType.Red : PieceType.Blue;
-		Utils.GetUIController().SpawnPiece(indexes, _isPlayersTurn ? PieceType.Red : PieceType.Blue);
-	}
+    public void UpdateState()
+    {
+        //is the board full?
+        SetPossibleMovements();
+        if (IsDraw) {
+            Utils.GetUIController().ShowPopup(0);
+            return;
+        }
 
-	public void UpdateState()
-	{
-		//is the board full?
-		SetPossibleMovements();
-		if(possibleMovements.Count == 0) {
-			Utils.GetUIController().SpawnPoup("Draw!");
-			return;
-		}
+        //did someone win?
+        int result = CheckGameOver();
+        if (result == 0) {
+            _isPlayersTurn = !_isPlayersTurn;
 
-		//did someone win?
-		int result = CheckGameOver();
-		if (result == 0) {
-			_isPlayersTurn = !_isPlayersTurn;
+            if (IsHumanOpponent) {
+                Utils.GetUIController().ShowCursor(_isPlayersTurn);
+            }
+            else {
+                if (_isPlayersTurn) {
+                    AllowInput();
+                }
+                else {
+                    BlockInput();
+                    opponent.Play();
+                }
+            }
 
-			if (_isPlayersTurn) {
-				AllowInput();
-			}
-			else{
-				BlockInput();
-				opponent.Play();
-			}
-			
-			return;
-		}
+            return;
+        }
 
-		//end
-		Utils.GetUIController().SpawnPoup(_isPlayersTurn ? "You win!" : "You lose!");
-	}
+        //end
+        Utils.GetUIController().ShowPopup(result);
+    }
 
-	public int CheckGameOver()
-	{
-		for(int i = 0; i < boardSize.x; i++) {
-			for (int j = 0; j < boardSize.y; j++) {
-				bool win = CheckWin(i, j);
-				if (win) {
-					return _isPlayersTurn ? 1 : -1;
-				}
-			}
-		}
+    public int CheckGameOver()
+    {
+        return Simulator.CheckWin(board, _isPlayersTurn);
+    }
 
-		return 0;
-	}
+    public void SetPossibleMovements()
+    {
+        possibleMovements = Simulator.GetPossibleMovements(board);
+    }
 
-	public bool CheckWin(int x, int y)
-	{
-		//skip empty slots
-		PieceType type = board[x, y];
-		if (type == PieceType.Empty) {
-			return false;
-		}
+    public void BlockInput()
+    {
+        Utils.GetUIController().HideCursor();
+        _blockInput = true;
+    }
 
-		//prevent out of bounds
-		int range = piecesToWin - 1;
-		bool insideRangeX = x + range < boardSize.x;
-		bool insideRangeY1 = y + range < boardSize.y;
-		bool insideRangeY2 = y - range >= 0;
-
-		//win
-		bool winHorizontal = insideRangeX;
-		bool winVertical = insideRangeY1;
-		bool winDiagonal1 = insideRangeX && insideRangeY1;
-		bool winDiagonal2 = insideRangeX && insideRangeY2;
-
-		//check consecutive slots for conditions
-		for (int w = 1; w < piecesToWin; w++) {
-			winHorizontal = winHorizontal && (type == board[x + w, y]);
-			winVertical = winVertical && (type == board[x, y + w]);
-			winDiagonal1 = winDiagonal1 && (type == board[x + w, y + w]);
-			winDiagonal2 = winDiagonal2 && (type == board[x + w, y - w]);
-		}
-
-		//return true if any condition was met
-		return winHorizontal || winVertical || winDiagonal1 || winDiagonal2;
-	}
-
-	#region GET SET
-	public PieceType[,] GetBoard()
-	{
-		return board;
-	}
-
-	public void SetPossibleMovements()
-	{
-		possibleMovements = new List<Vector2Int>();
-
-		//finds the first empty slot in each column
-		for (int i = 0; i < boardSize.y; i++) {
-			for (int j = 0; j < boardSize.x; j++) {
-				if (board[j, i] == PieceType.Empty) {
-					possibleMovements.Add(new Vector2Int(j, i));
-					break;
-				}
-			}
-		}
-	}
-
-	public List<Vector2Int> GetPossibleMovements()
-	{
-		return possibleMovements;
-	}
-
-	public void BlockInput()
-	{
-		Utils.GetUIController().HideCursor();
-		_blockInput = true;
-	}
-
-	public void AllowInput()
-	{
-		Utils.GetUIController().ShowCursor();
-		_blockInput = false;
-	}
-    #endregion
+    public void AllowInput()
+    {
+        Utils.GetUIController().ShowCursor(_isPlayersTurn);
+        _blockInput = false;
+    }
 }

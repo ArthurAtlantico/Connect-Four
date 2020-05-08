@@ -6,9 +6,11 @@ using System.Linq;
 
 public class Simulation
 {
+    //data
     protected PieceType[,] simulatedBoard;
     public bool isPlayersTurn;
-    private int PiecesToWin => ConnectFourController.piecesToWin;
+
+    //shortcuts
     public bool ContainsEmptyCell => GetPossibleMovements().Count != 0;
     public bool SomeoneWon => CheckWin() != 0;
 
@@ -31,11 +33,39 @@ public class Simulation
 
     public List<Vector2Int> GetPossibleMovements()
     {
+        return Simulator.GetPossibleMovements(simulatedBoard);
+    }
+
+    public int SimulateDrop(int column)
+    {
+        return Simulator.SimulateDrop(simulatedBoard, column, isPlayersTurn);
+    }
+
+    public int GetRandomMove()
+    {
+        return Simulator.GetRandomMove(simulatedBoard);
+    }
+
+    public int CheckWin()
+    {
+        return Simulator.CheckWin(simulatedBoard, isPlayersTurn);
+    }
+
+    public void SwitchPlayer()
+    {
+        isPlayersTurn = !isPlayersTurn;
+    }
+}
+
+public class Simulator : MonoBehaviour
+{
+    public static List<Vector2Int> GetPossibleMovements(PieceType[,] board)
+    {
         List<Vector2Int> possibleMovements = new List<Vector2Int>();
 
-        for (int i = 0; i < simulatedBoard.GetLength(1); i++) {
-            for (int j = 0; j < simulatedBoard.GetLength(0); j++) {
-                if (simulatedBoard[j, i] == PieceType.Empty) {
+        for (int i = 0; i < board.GetLength(1); i++) {
+            for (int j = 0; j < board.GetLength(0); j++) {
+                if (board[j, i] == PieceType.Empty) {
                     possibleMovements.Add(new Vector2Int(j, i));
                     break;
                 }
@@ -45,35 +75,26 @@ public class Simulation
         return possibleMovements;
     }
 
-    public int SimulateDrop(int column)
+    public static int SimulateDrop(PieceType[,] board, int column, bool isPlayersTurn)
     {
-        var movements = GetPossibleMovements();
-        if(!movements.Exists(element => element.y == column)){
-            return -1;
-        }
-
+        var movements = GetPossibleMovements(board);
         Vector2Int indexes = movements.Find(element => element.y == column);
-        simulatedBoard[indexes.x, indexes.y] = isPlayersTurn ? PieceType.Red : PieceType.Blue;
+        board[indexes.x, indexes.y] = isPlayersTurn ? PieceType.Red : PieceType.Blue;
         return column;
     }
 
-    public int GetRandomMove()
+    public static int GetRandomMove(PieceType[,] board)
     {
-        if (!ContainsEmptyCell) {
-            return -1;
-        }
-
-        List<Vector2Int> movements = GetPossibleMovements();
-
+        var movements = GetPossibleMovements(board);
         System.Random r = new System.Random();
         return movements[r.Next(0, movements.Count)].y;
     }
 
-    public int CheckWin()
+    public static int CheckWin(PieceType[,] board, bool isPlayersTurn)
     {
-        for (int i = 0; i < simulatedBoard.GetLength(0); i++) {
-            for (int j = 0; j < simulatedBoard.GetLength(1); j++) {
-                bool win = CheckWin(i, j);
+        for (int i = 0; i < board.GetLength(0); i++) {
+            for (int j = 0; j < board.GetLength(1); j++) {
+                bool win = CheckWin(board, i, j);
                 if (win) {
                     return isPlayersTurn ? 1 : -1;
                 }
@@ -83,18 +104,18 @@ public class Simulation
         return 0;
     }
 
-    public bool CheckWin(int x, int y)
+    public static bool CheckWin(PieceType[,] board, int x, int y)
     {
         //skip empty slots
-        PieceType type = simulatedBoard[x, y];
+        PieceType type = board[x, y];
         if (type == PieceType.Empty) {
             return false;
         }
 
         //prevent out of bounds
-        int range = PiecesToWin - 1;
-        bool insideRangeX = x + range < simulatedBoard.GetLength(0);
-        bool insideRangeY1 = y + range < simulatedBoard.GetLength(1);
+        int range = ConnectFourController.piecesToWin - 1;
+        bool insideRangeX = x + range < board.GetLength(0);
+        bool insideRangeY1 = y + range < board.GetLength(1);
         bool insideRangeY2 = y - range >= 0;
 
         //win
@@ -104,19 +125,14 @@ public class Simulation
         bool winDiagonal2 = insideRangeX && insideRangeY2;
 
         //check conditions
-        for (int w = 1; w < PiecesToWin; w++) {
-            winHorizontal = winHorizontal && (type == simulatedBoard[x + w, y]);
-            winVertical = winVertical && (type == simulatedBoard[x, y + w]);
-            winDiagonal1 = winDiagonal1 && (type == simulatedBoard[x + w, y + w]);
-            winDiagonal2 = winDiagonal2 && (type == simulatedBoard[x + w, y - w]);
+        for (int w = 1; w < ConnectFourController.piecesToWin; w++) {
+            winHorizontal = winHorizontal && (type == board[x + w, y]);
+            winVertical = winVertical && (type == board[x, y + w]);
+            winDiagonal1 = winDiagonal1 && (type == board[x + w, y + w]);
+            winDiagonal2 = winDiagonal2 && (type == board[x + w, y - w]);
         }
 
         //return true if any condition was met
         return winHorizontal || winVertical || winDiagonal1 || winDiagonal2;
-    }
-
-    public void SwitchPlayer()
-    {
-        isPlayersTurn = !isPlayersTurn;
     }
 }

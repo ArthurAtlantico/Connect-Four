@@ -10,22 +10,29 @@ public class ConnectFourUI : MonoBehaviour
     //Prefabs
     [SerializeField] protected Piece piecePrefab;
     [SerializeField] protected Field fieldPrefab;
-    
+
     //Objects
     [SerializeField] protected Image cursor;
+    [SerializeField] protected Color32 redColor;
+    [SerializeField] protected Color32 blueColor;
     [SerializeField] protected Transform piecesParent;
-    [SerializeField] protected TextMeshProUGUI gameOverPopup;
-    protected Field[,] boardField;
 
-    //shortcut
-    protected int Rows => boardField.GetLength(0);
-    protected int Cols => boardField.GetLength(1);
+    //popups
+    [SerializeField] protected GameObject waitForOpponent;
+    [SerializeField] protected GameObject drawPopup;
+    [SerializeField] protected GameObject redWinsPopup;
+    [SerializeField] protected GameObject blueWinsPopup;
+
+    public Field[,] boardField { get; private set; }
+
+    //ref
+    public Vector2Int lastField;
 
     public void DrawBoard(int x, int y)
     {
         boardField = new Field[x, y];
 
-        for(int i = 0; i < x; i++) {
+        for (int i = 0; i < x; i++) {
             for (int j = 0; j < y; j++) {
                 boardField[i, j] = Instantiate(fieldPrefab, this.transform);
                 boardField[i, j].SetIndexes(i, j);
@@ -33,7 +40,7 @@ public class ConnectFourUI : MonoBehaviour
         }
     }
 
-    public void SpawnPiece(Vector2Int indexes, PieceType type)
+    public void AddPiece(Vector2Int indexes, PieceType type)
     {
         Piece p = Instantiate(piecePrefab, piecesParent);
         p.SetPieceType(type);
@@ -43,34 +50,48 @@ public class ConnectFourUI : MonoBehaviour
         p.StartAnimation(endPosition, targetPosition);
     }
 
-    public void SpawnPoup(string text)
+    public void ShowPopup(int result)
     {
         Utils.GetGameController().BlockInput();
         HideCursor();
-        gameOverPopup.text = text;
-        gameOverPopup.transform.parent.gameObject.SetActive(true);
+
+        switch (result) {
+            case -1:
+                blueWinsPopup.SetActive(true);
+                break;
+
+            case 0:
+                drawPopup.SetActive(true);
+                break;
+
+            case 1:
+                redWinsPopup.SetActive(true);
+                break;
+
+        }
     }
 
-    #region GET SET
-    public Field[,] GetBoard()
+    public void OpponentPopup(bool show)
     {
-        return boardField;
+        waitForOpponent.SetActive(show);
     }
 
-    public void ShowCursor()
+    public void ShowCursor(bool isRed)
     {
+        cursor.color = isRed ? redColor : blueColor;
         cursor.gameObject.SetActive(true);
+        boardField[lastField.x, lastField.y].ShowPreview();
     }
 
     public void HideCursor()
     {
         cursor.gameObject.SetActive(false);
+        boardField[lastField.x, lastField.y].HidePreview();
     }
 
     public void SetCursorPosition(float x)
     {
         cursor.rectTransform.position = new Vector2(x, cursor.rectTransform.position.y);
     }
-    #endregion
 
 }

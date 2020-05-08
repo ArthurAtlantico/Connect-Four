@@ -9,4 +9,9 @@ public class RestartButton : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
+
+    public void Quit()
+    {
+        SceneManager.LoadScene("StartScene");
+    }
 }

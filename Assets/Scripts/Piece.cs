@@ -31,6 +31,10 @@ public class Piece : MonoBehaviour
 			transform.position = Vector3.Lerp(transform.position, endPos, t);
 			yield return new WaitForEndOfFrame();
 			t += Time.deltaTime;
+
+			if (t >= 1) {
+				break;
+			}
 		}
 
 		Utils.GetGameController().AllowInput();

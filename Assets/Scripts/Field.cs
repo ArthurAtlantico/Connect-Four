@@ -3,16 +3,23 @@ using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class Field : MonoBehaviour
 {
     //UI
-    [SerializeField] protected Image previewImage; 
+    [SerializeField] protected Color defaultColor;
+    [SerializeField] protected Color previewColor;
+    private Image _myImage;
 
     //data
     protected Vector2Int gridIndex;
-    public bool ColumnIsFree => Utils.GetGameController().GetPossibleMovements().Exists(element => element.y == gridIndex.y);
-    private Vector2Int FreeIndex => Utils.GetGameController().GetPossibleMovements().Find(element => element.y == gridIndex.y);
+    public bool ColumnIsFree => Utils.GetGameController().possibleMovements.Exists(element => element.y == gridIndex.y);
+ 
+    private void Awake()
+    {
+        _myImage = GetComponent<Image>();
+    }
 
     public void SetIndexes(int x, int y)
     {
@@ -20,22 +27,15 @@ public class Field : MonoBehaviour
         gameObject.name = "FIELD " + gridIndex;
     }
 
-    public Vector2Int GetIndexes()
-    {
-        return gridIndex;
-    }
-
     public void MouseEnter()
     {
+        Utils.GetUIController().lastField = gridIndex;
+
         if (!Utils.GetGameController().CanPlay) {
             return;
         }
 
-        if (ColumnIsFree) {
-            Vector2Int indexes = FreeIndex;
-            Utils.GetUIController().GetBoard()[indexes.x, indexes.y].ShowPreview();
-            Utils.GetUIController().SetCursorPosition(transform.position.x);
-        }
+        ShowPreview();
     }
 
     public void MouseExit()
@@ -44,10 +44,7 @@ public class Field : MonoBehaviour
             return;
         }
 
-        if (ColumnIsFree) {
-            Vector2Int indexes = FreeIndex;
-            Utils.GetUIController().GetBoard()[indexes.x, indexes.y].HidePreview();
-        }
+        HidePreview();
     }
 
     public void MouseClick()
@@ -57,19 +54,37 @@ public class Field : MonoBehaviour
         }
 
         if (ColumnIsFree) {
-            Vector2Int indexes = FreeIndex;
-            Utils.GetUIController().GetBoard()[indexes.x, indexes.y].HidePreview();
+            Vector2Int indexes = Utils.GetGameController().possibleMovements.Find(element => element.y == gridIndex.y);
             Utils.GetGameController().AddPiece(indexes);
         }
     }
 
     public void ShowPreview()
     {
-        previewImage.gameObject.SetActive(true);
+        if (!ColumnIsFree) {
+            return;
+        }
+
+        Utils.GetUIController().SetCursorPosition(transform.position.x);
+
+       foreach(Field f in Utils.GetUIController().boardField) {
+            if(f.gridIndex.y == this.gridIndex.y) {
+                f.SetColor(previewColor);
+            }
+        }
     }
 
     public void HidePreview()
     {
-        previewImage.gameObject.SetActive(false);
+        foreach (Field f in Utils.GetUIController().boardField) {
+            if (f.gridIndex.y == this.gridIndex.y) {
+                f.SetColor(defaultColor);
+            }
+        }
+    }
+
+    protected void SetColor(Color c)
+    {
+        _myImage.color = c;
     }
 }
