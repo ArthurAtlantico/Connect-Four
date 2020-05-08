@@ -1,18 +1,16 @@
 # Connect-Four
 Jogo Connect Four criado como tarefa do grupo de estudos de IA. O código deste exemplo foi inspirado no repositório do usuário [KoalaMoala](https://github.com/KoalaMoala/Connect4).
 
-![](https://gph.is/g/4A6YKdQ)
+![](https://media.giphy.com/media/Jlq2TzJArVMJr1Bp8q/giphy.gif)
 
 [Jogue aqui online](https://arthuratlantico.github.io/Connect-Four/)
 
 ### Regras
-O Coonect Four é parecido com um jogo da velha. As regras são as seguintes:
+O Coonect Four é parecido com um jogo da velha, mas em um tabuleiro tamanho 6x7. As regras são as seguintes:
 1. São necessárias 4 peças consecutivas da mesma cor para ganhar
 2. Você pode formar linhas horizontais, verticais e diagonais
 3. Você escolhe uma coluna e joga a peça naquela coluna
 4. Se a coluna estiver ocupada, você não pode colocar nada nela
-
-Neste jogo, o tabuleiro tem tamanho 6x7.
 
 ### Inteligência Artificial
 Utilizamos o algoritmo de decisão [MCTS](Monte Carlo tree search), que consiste em 4 etapas:
