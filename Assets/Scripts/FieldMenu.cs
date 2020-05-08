@@ -67,7 +67,8 @@ public class FieldMenu : MonoBehaviour
                 break;
             }
         }
-
+        
+        isAnimating = false;
         SceneManager.LoadScene(sceneName);
     }
 
